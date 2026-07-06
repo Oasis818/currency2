@@ -1,0 +1,616 @@
+{
+  "info": {
+    "_postman_id": "c2b1a1b0-1234-4a5b-9c8d-fxbasic00001",
+    "name": "Currency2 - FX Transfer Platform",
+    "description": "Postman collection for testing the Currency2 (FxBasic) API: wallets, top-up, convert, and payout endpoints. Includes both happy path and sad path (negative) scenarios for each feature.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Wallets",
+      "item": [
+        {
+          "name": "Create Wallet - Happy Path (USD)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Wallet has USD currency and zero balance', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.currency).to.eql('USD');",
+                  "    pm.expect(json.balance).to.eql(0);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"currency\": \"USD\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Creates a new USD wallet for the demo user (userId 1). Expected: 200 OK with new wallet object."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Wallet - Sad Path (Duplicate Currency)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about duplicate wallet', function () {",
+                  "    pm.expect(pm.response.text()).to.include('already exists');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"currency\": \"GBP\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Attempts to create a second GBP wallet for the same user. GBP wallet already exists from seed data. Expected: 400 Bad Request - wallet already exists."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Wallet - Sad Path (Invalid Currency Code)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about currency code length', function () {",
+                  "    pm.expect(pm.response.text()).to.include('3-letter code');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"currency\": \"US\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets"]
+            },
+            "description": "Attempts to create a wallet with an invalid (2-letter) currency code. Expected: 400 Bad Request."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Wallets by User - Happy Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is an array', function () {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/wallets/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "wallets", "1"]
+            },
+            "description": "Lists all wallets belonging to userId 1. Expected: 200 OK with an array of wallets (seeded GBP + EUR, plus any created above)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Top-Up",
+      "item": [
+        {
+          "name": "Top-Up GBP Wallet - Happy Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains success message and updated balance', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Top-up successful');",
+                  "    pm.expect(json.balance).to.be.above(1000);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"bankAccountId\": 1,\n  \"destinationWalletId\": 1,\n  \"amount\": 200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topup"]
+            },
+            "description": "Tops up the seeded GBP wallet (id 1) from the seeded UK main bank account (id 1) with 200. Expected: 200 OK, balance increases by 200."
+          },
+          "response": []
+        },
+        {
+          "name": "Top-Up - Sad Path (Non-GBP Destination Wallet)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about GBP-only top-up', function () {",
+                  "    pm.expect(pm.response.text()).to.include('GBP wallet');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"bankAccountId\": 1,\n  \"destinationWalletId\": 2,\n  \"amount\": 200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topup"]
+            },
+            "description": "Attempts to top-up the seeded EUR wallet (id 2) directly from the UK bank account. Expected: 400 Bad Request - top-up only allowed into GBP wallet."
+          },
+          "response": []
+        },
+        {
+          "name": "Top-Up - Sad Path (Non-UK / Non-Main Bank Account)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about designated UK bank account', function () {",
+                  "    pm.expect(pm.response.text()).to.include('designated UK bank account');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"bankAccountId\": 2,\n  \"destinationWalletId\": 1,\n  \"amount\": 200\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topup"]
+            },
+            "description": "Attempts to top-up using the seeded EU beneficiary bank account (id 2), which is not the user's designated UK main account. Expected: 400 Bad Request."
+          },
+          "response": []
+        },
+        {
+          "name": "Top-Up - Sad Path (Invalid Amount)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about amount', function () {",
+                  "    pm.expect(pm.response.text()).to.include('greater than 0');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"bankAccountId\": 1,\n  \"destinationWalletId\": 1,\n  \"amount\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/topup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "topup"]
+            },
+            "description": "Attempts a top-up with an amount of 0. Expected: 400 Bad Request - amount must be greater than 0."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Convert",
+      "item": [
+        {
+          "name": "Convert GBP to EUR - Happy Path",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains convertedAmount and rateUsed', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Conversion successful');",
+                  "    pm.expect(json).to.have.property('convertedAmount');",
+                  "    pm.expect(json).to.have.property('rateUsed');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"fromWalletId\": 1,\n  \"toWalletId\": 2,\n  \"amount\": 100\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/convert",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "convert"]
+            },
+            "description": "Converts 100 GBP (wallet 1) into EUR (wallet 2) using the seeded daily rate. Expected: 200 OK with convertedAmount and rateUsed."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Sad Path (Insufficient Funds)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about insufficient funds', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Insufficient funds');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"fromWalletId\": 1,\n  \"toWalletId\": 2,\n  \"amount\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/convert",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "convert"]
+            },
+            "description": "Attempts to convert an amount far larger than the GBP wallet balance. Expected: 400 Bad Request - insufficient funds."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Sad Path (Same Source and Destination Wallet)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about same wallet', function () {",
+                  "    pm.expect(pm.response.text()).to.include('must be different');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"fromWalletId\": 1,\n  \"toWalletId\": 1,\n  \"amount\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/convert",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "convert"]
+            },
+            "description": "Attempts to convert from and to the same wallet id. Expected: 400 Bad Request."
+          },
+          "response": []
+        },
+        {
+          "name": "Convert - Sad Path (No Exchange Rate Available)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about missing daily rate', function () {",
+                  "    pm.expect(pm.response.text()).to.include('exchange rate not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"fromWalletId\": 3,\n  \"toWalletId\": 2,\n  \"amount\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/convert",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "convert"]
+            },
+            "description": "Run this AFTER creating a USD wallet (Wallets > Create Wallet - Happy Path) so walletId 3 (USD) exists. No USD->EUR daily rate is seeded, so this should fail. Expected: 400 Bad Request - daily exchange rate not found."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payout",
+      "item": [
+        {
+          "name": "Payout - Happy Path (Matching Currency)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response contains success message and remainingBalance', function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.message).to.eql('Payout successful');",
+                  "    pm.expect(json).to.have.property('remainingBalance');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"sourceWalletId\": 2,\n  \"destinationBankAccountId\": 2,\n  \"amount\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payout"]
+            },
+            "description": "Pays out 20 EUR from the seeded EUR wallet (id 2) to the seeded EU beneficiary bank account (id 2, EUR). Expected: 200 OK, matching currency payout succeeds."
+          },
+          "response": []
+        },
+        {
+          "name": "Payout - Sad Path (Currency Mismatch)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about converting first', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Convert first');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"sourceWalletId\": 1,\n  \"destinationBankAccountId\": 2,\n  \"amount\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payout"]
+            },
+            "description": "Attempts to pay out from the GBP wallet (id 1) into the EUR beneficiary bank account (id 2). Currencies differ, so this should fail. Expected: 400 Bad Request - convert first, then payout."
+          },
+          "response": []
+        },
+        {
+          "name": "Payout - Sad Path (Insufficient Funds)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "pm.test('Error message about insufficient funds', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Insufficient funds');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"sourceWalletId\": 2,\n  \"destinationBankAccountId\": 2,\n  \"amount\": 999999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payout"]
+            },
+            "description": "Attempts to pay out an amount far larger than the EUR wallet balance. Expected: 400 Bad Request - insufficient funds."
+          },
+          "response": []
+        },
+        {
+          "name": "Payout - Sad Path (Destination Bank Account Not Found)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 404', function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "pm.test('Error message about bank account not found', function () {",
+                  "    pm.expect(pm.response.text()).to.include('Destination bank account not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 1,\n  \"sourceWalletId\": 2,\n  \"destinationBankAccountId\": 9999,\n  \"amount\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payout"]
+            },
+            "description": "Attempts to pay out to a bank account id that does not exist. Expected: 404 Not Found."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ]
+}
